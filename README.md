@@ -13,15 +13,14 @@ Before using this script, make sure you have the following prerequisites:
 
 ## Getting Started
 
-1. **Obtain LINE Notify Access Token:**
+1. **Obtain LINE Messaging API Access Token and User/Group Id:**
 
-   - Go to the [LINE Notify](https://notify-bot.line.me/en/) website and log in with your LINE account.
-   - Create a new messaging channel, and obtain the access token.
+   - Following the instruction from https://medium.com/linedevth/line-notify-migration-tips-0432e5f7af6e.
 
 2. **Configure the Script:**
 
    - Open the `spotprice.sh` script in a text editor.
-   - Replace `<YOUR_LINE_ACCESS_TOKEN>` with the access token obtained from LINE Notify.
+   - Copy `.env.example` to `.env` and fill up the required environment variables.
 
 3. **Set Permissions:**
    - Ensure that the script has execute permissions. If not, run the following command:
