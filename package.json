@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "dotenv": "16.4.5"
+  },
+  "name": "electric-spot-price",
+  "version": "1.0.0",
+  "type": "module",
+  "devDependencies": {},
+  "scripts": {
+    "start": "node spotprice.js"
+  },
+  "author": "Pisut Sritrakulchai",
+  "license": "ISC"
+}

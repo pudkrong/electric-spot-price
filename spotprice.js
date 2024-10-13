@@ -1,7 +1,10 @@
+import "dotenv/config";
+
 const URL = "https://bff.malarenergi.se/spotpriser/api/v1/prices/area/SE3";
-const LINE_API_URL = "https://api.line.me/v2/bot/message/push";
+const TELEGRAM_URL = "https://api.telegram.org";
+
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
-const USER_OR_GROUP_ID = process.env.USER_OR_GROUP_ID;
+const CHAT_ID = process.env.CHAT_ID;
 
 const createMessage = (spot, prefix) => {
   const start = new Date(spot.startDateTime).getHours();
@@ -9,23 +12,15 @@ const createMessage = (spot, prefix) => {
   return `${prefix} (${start}-${end}): ${Number(spot.price).toFixed(3)}`;
 };
 
-const notify = async (message) => {
-  const body = new FormData();
-  body.append("message", message);
-  const res = await fetch(LINE_API_URL, {
+const notifyToTelegram = async (message) => {
+  const res = await fetch(`${TELEGRAM_URL}/bot${ACCESS_TOKEN}/sendMessage`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${ACCESS_TOKEN}`,
       "Content-Type": `application/json`,
     },
     body: JSON.stringify({
-      to: USER_OR_GROUP_ID,
-      messages: [
-        {
-          type: "text",
-          text: message,
-        },
-      ],
+      chat_id: CHAT_ID,
+      text: message,
     }),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -39,7 +34,9 @@ async function main() {
   const now = Date.now();
 
   const messages = [];
-  messages.push(`Date ${new Intl.DateTimeFormat("en-UK").format(now)}\n`);
+  messages.push(
+    `⚡🔌💡 Date ${new Intl.DateTimeFormat("en-UK").format(now)}\n`
+  );
   messages.push(createMessage(data.current, "Current"));
   messages.push(createMessage(data.todayMin, "Today min"));
   messages.push(createMessage(data.todayMax, "Today max"));
@@ -56,10 +53,10 @@ async function main() {
   }
 
   const notificationMessages = messages.join("\n").trim();
-  await notify(notificationMessages);
+  await notifyToTelegram(notificationMessages);
 
   console.log(`
-Sent line notification:
+Sent telegram notification:
 
 ${notificationMessages}
 `);
