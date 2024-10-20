@@ -2,7 +2,7 @@
 
 ## Overview
 
-This application is designed to fetch the electric spot price from a specified API endpoint: [Mälarenergi Spot Prices API](https://bff.malarenergi.se/spotpriser/api/v1/prices/area/SE3). The price information is then reported via the Telegram Bot API. Instructions on how to use the Telegram Bot API can be found [here](https://dev.to/climentea/push-notifications-from-server-with-telegram-bot-api-32b3).
+This application is designed to fetch the electric spot price from a specified API endpoint: [https://www.vattenfall.se/elavtal/elpriser/timpris/?icmp=timpris-btn#setimpris](https://www.vattenfall.se/api/price/spot/pricearea/<yyyy-MM-dd>/<yyyy-MM-dd>/SN3). The price information is then reported via the Telegram Bot API. Instructions on how to use the Telegram Bot API can be found [here](https://dev.to/climentea/push-notifications-from-server-with-telegram-bot-api-32b3).
 
 ## Usage
 

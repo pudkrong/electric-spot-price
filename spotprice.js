@@ -1,4 +1,13 @@
 import "dotenv/config";
+import {
+  format,
+  addDays,
+  parseJSON,
+  startOfHour,
+  isToday,
+  eachHourOfInterval,
+  addHours,
+} from "date-fns";
 
 const URL = "https://bff.malarenergi.se/spotpriser/api/v1/prices/area/SE3";
 const TELEGRAM_URL = "https://api.telegram.org";
@@ -6,10 +15,15 @@ const TELEGRAM_URL = "https://api.telegram.org";
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
+const toNumber = (v) => Number(v).toFixed(3);
+
 const createMessage = (spot, prefix) => {
-  const start = new Date(spot.startDateTime).getHours();
-  const end = new Date(spot.endDateTime).getHours();
-  return `${prefix} (${start}-${end}): ${Number(spot.price).toFixed(3)}`;
+  const start = Number(spot.TimeStampHour.split(":")[0]);
+  const end = start + 1;
+  return `${prefix} (${String(start).padStart(2, "0")}-${String(end).padStart(
+    2,
+    "0"
+  )}): ${toNumber(spot.Value)}`;
 };
 
 const notifyToTelegram = async (message) => {
@@ -26,30 +40,65 @@ const notifyToTelegram = async (message) => {
   if (!res.ok) throw new Error(await res.text());
 };
 
-async function main() {
-  const res = await fetch(URL);
-  if (!res.ok) throw new Error("Cannot fetch the spot price");
+const getHourlyPrice = async () => {
+  // vattenfall
+  const now = new Date();
+  const tomorrow = addDays(now, 1);
+  const url = `https://www.vattenfall.se/api/price/spot/pricearea/${format(
+    now,
+    "yyyy-MM-dd"
+  )}/${format(tomorrow, "yyyy-MM-dd")}/SN3`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Cannot fetch the electric price`);
 
   const data = await res.json();
-  const now = Date.now();
+  const spots = new Map();
+  let todayMin = {
+    Value: Number.MAX_SAFE_INTEGER,
+  };
+  let todayMax = {
+    Value: Number.MIN_SAFE_INTEGER,
+  };
+  let todayTotal = 0;
+  let todayCount = 0;
+  data.forEach((d) => {
+    const date = parseJSON(`${d.TimeStamp}+02:00`);
+    spots.set(date.toISOString(), d);
+    if (isToday(date)) {
+      todayTotal += d.Value;
+      todayCount++;
+      todayMin = d.Value < todayMin.Value ? d : todayMin;
+      todayMax = d.Value > todayMax.Value ? d : todayMax;
+    }
+  });
+  const next5hrs = eachHourOfInterval({
+    start: addHours(startOfHour(now), 1),
+    end: addHours(startOfHour(now), 5),
+  });
+
+  return {
+    current: spots.get(startOfHour(now).toISOString()),
+    todayMax,
+    todayMin,
+    todayAvg: toNumber(todayTotal / todayCount),
+    next: next5hrs.map((d) => spots.get(d.toISOString())),
+  };
+};
+
+async function main() {
+  const spotPrices = await getHourlyPrice();
 
   const messages = [];
-  messages.push(
-    `⚡🔌💡 Date ${new Intl.DateTimeFormat("en-UK").format(now)}\n`
-  );
-  messages.push(createMessage(data.current, "Current"));
-  messages.push(createMessage(data.todayMin, "Today min"));
-  messages.push(createMessage(data.todayMax, "Today max"));
+  messages.push(`⚡🔌💡 Date ${format(new Date(), "dd/MM/yyyy")}\n`);
+
+  messages.push(createMessage(spotPrices.current, "Current"));
+  messages.push(createMessage(spotPrices.todayMin, "Today min"));
+  messages.push(createMessage(spotPrices.todayMax, "Today max"));
+  messages.push(`Average: ${toNumber(spotPrices.todayAvg)}`);
 
   messages.push("");
-  const nextOccurrences = data.intervals.filter(
-    (d) => new Date(d.startDateTime) > now
-  );
-  let count = 0;
-  for (const nextOccurrence of nextOccurrences) {
+  for (const nextOccurrence of spotPrices.next) {
     messages.push(createMessage(nextOccurrence, "Next"));
-    count++;
-    if (count >= 5) break;
   }
 
   const notificationMessages = messages.join("\n").trim();
