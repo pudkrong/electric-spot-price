@@ -43,11 +43,11 @@ const notifyToTelegram = async (message) => {
 const getHourlyPrice = async () => {
   // vattenfall
   const now = new Date();
-  const tomorrow = addDays(now, 1);
+  const dayAfterTomorrow = addDays(now, 2);
   const url = `https://www.vattenfall.se/api/price/spot/pricearea/${format(
     now,
     "yyyy-MM-dd"
-  )}/${format(tomorrow, "yyyy-MM-dd")}/SN3`;
+  )}/${format(dayAfterTomorrow, "yyyy-MM-dd")}/SN3`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Cannot fetch the electric price`);
 
