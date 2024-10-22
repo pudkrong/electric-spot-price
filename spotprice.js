@@ -18,6 +18,8 @@ const CHAT_ID = process.env.CHAT_ID;
 const toNumber = (v) => Number(v).toFixed(3);
 
 const createMessage = (spot, prefix) => {
+  if (spot?.TimeStampHour === undefined) return null;
+
   const start = Number(spot.TimeStampHour.split(":")[0]);
   const end = start + 1;
   return `${prefix} (${String(start).padStart(2, "0")}-${String(end).padStart(
@@ -101,7 +103,7 @@ async function main() {
     messages.push(createMessage(nextOccurrence, "Next"));
   }
 
-  const notificationMessages = messages.join("\n").trim();
+  const notificationMessages = messages.filter(Boolean).join("\n").trim();
   await notifyToTelegram(notificationMessages);
 
   console.log(`
