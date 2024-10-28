@@ -63,8 +63,12 @@ const getHourlyPrice = async () => {
   };
   let todayTotal = 0;
   let todayCount = 0;
+  const tzHourOffset = (now.getTimezoneOffset() / 60) * -1;
+  const tzOffset = `${tzHourOffset > 0 ? "+" : "-"}${String(
+    tzHourOffset
+  ).padStart(2, "0")}:00`;
   data.forEach((d) => {
-    const date = parseJSON(`${d.TimeStamp}+02:00`);
+    const date = parseJSON(`${d.TimeStamp}${tzOffset}`);
     spots.set(date.toISOString(), d);
     if (isToday(date)) {
       todayTotal += d.Value;
