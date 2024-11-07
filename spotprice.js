@@ -9,7 +9,6 @@ import {
   addHours,
 } from "date-fns";
 
-const URL = "https://bff.malarenergi.se/spotpriser/api/v1/prices/area/SE3";
 const TELEGRAM_URL = "https://api.telegram.org";
 
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
@@ -18,9 +17,9 @@ const CHAT_ID = process.env.CHAT_ID;
 const toNumber = (v) => Number(v).toFixed(3);
 
 const createMessage = (spot, prefix) => {
-  if (spot?.TimeStampHour === undefined) return null;
+  if (spot?.Timestamp === undefined) return null;
 
-  const start = Number(spot.TimeStampHour.split(":")[0]);
+  const start = Number(format(spot.Timestamp, "HH"));
   const end = start + 1;
   return `${prefix} (${String(start).padStart(2, "0")}-${String(end).padStart(
     2,
@@ -43,17 +42,21 @@ const notifyToTelegram = async (message) => {
 };
 
 const getHourlyPrice = async () => {
-  // vattenfall
-  const now = new Date();
-  const dayAfterTomorrow = addDays(now, 2);
-  const url = `https://www.vattenfall.se/api/price/spot/pricearea/${format(
-    now,
-    "yyyy-MM-dd"
-  )}/${format(dayAfterTomorrow, "yyyy-MM-dd")}/SN3`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Cannot fetch the electric price`);
+  const getPrice = async (date) => {
+    // https://www.elprisetjustnu.se/elpris-api
+    const url = `https://www.elprisetjustnu.se/api/v1/prices/${format(
+      date,
+      "yyyy/MM-dd"
+    )}_SE3.json`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Cannot fetch the electric price`);
 
-  const data = await res.json();
+    return await res.json();
+  };
+
+  const now = new Date();
+  const data = await getPrice(now);
+
   const spots = new Map();
   let todayMin = {
     Value: Number.MAX_SAFE_INTEGER,
@@ -63,12 +66,10 @@ const getHourlyPrice = async () => {
   };
   let todayTotal = 0;
   let todayCount = 0;
-  const tzHourOffset = (now.getTimezoneOffset() / 60) * -1;
-  const tzOffset = `${tzHourOffset > 0 ? "+" : "-"}${String(
-    tzHourOffset
-  ).padStart(2, "0")}:00`;
   data.forEach((d) => {
-    const date = parseJSON(`${d.TimeStamp}${tzOffset}`);
+    const date = new Date(d.time_start);
+    d.Value = d.SEK_per_kWh * 100;
+    d.Timestamp = date;
     spots.set(date.toISOString(), d);
     if (isToday(date)) {
       todayTotal += d.Value;
@@ -77,10 +78,19 @@ const getHourlyPrice = async () => {
       todayMax = d.Value > todayMax.Value ? d : todayMax;
     }
   });
+
   const next5hrs = eachHourOfInterval({
     start: addHours(startOfHour(now), 1),
     end: addHours(startOfHour(now), 5),
   });
+  if (next5hrs[0].getHours() >= 20) {
+    const nextDayData = await getPrice(addDays(now, 1));
+    nextDayData.forEach((d) => {
+      const date = new Date(d.time_start);
+      d.Value = d.SEK_per_kWh * 100;
+      spots.set(date.toISOString(), d);
+    });
+  }
 
   return {
     current: spots.get(startOfHour(now).toISOString()),
@@ -111,10 +121,10 @@ async function main() {
   await notifyToTelegram(notificationMessages);
 
   console.log(`
-Sent telegram notification:
+  Sent telegram notification:
 
-${notificationMessages}
-`);
+  ${notificationMessages}
+  `);
   process.exit(0);
 }
 
