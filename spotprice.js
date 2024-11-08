@@ -88,6 +88,7 @@ const getHourlyPrice = async () => {
     nextDayData.forEach((d) => {
       const date = new Date(d.time_start);
       d.Value = d.SEK_per_kWh * 100;
+      d.Timestamp = date;
       spots.set(date.toISOString(), d);
     });
   }
