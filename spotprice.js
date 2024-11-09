@@ -83,7 +83,7 @@ const getHourlyPrice = async () => {
     start: addHours(startOfHour(now), 1),
     end: addHours(startOfHour(now), 5),
   });
-  if (next5hrs[0].getHours() >= 20) {
+  if (now.getHours() >= 19) {
     const nextDayData = await getPrice(addDays(now, 1));
     nextDayData.forEach((d) => {
       const date = new Date(d.time_start);
